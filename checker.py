@@ -67,29 +67,13 @@ def update_client():
 
 
 def get_remote_recorders():
-    xmldata = r"C:\Users\Itayshu\Desktop\Panopto_Recording_Check\sample.xml"
+    tree = ETree.parse(r"C:\Users\Itayshu\Desktop\Panopto_Recording_Check\sample.xml")
+    # get the root of the tree
+    root = tree.getroot()
 
-    prstree = ETree.parse(xmldata)
-    root = prstree.getroot()
+    # return the DataFrame
 
-    # print(root)
-    store_items = []
-    all_items = []
 
-    for storeno in root.iter('store'):
-        store_Nr = storeno.attrib.get('slNo')
-        MO_From = storeno.find('MO_From').text
-        MO_To = storeno.find('MO_To').text
-        HA_Name = storeno.find('HA_Name').text
-        GR_CO_id = storeno.find('GR_CO_id').text
-
-        store_items = [store_Nr, MO_From, MO_To, HA_Name, GR_CO_id]
-        all_items.append(store_items)
-
-    xmlToDf = pd.DataFrame(all_items, columns=[
-        'SL No', 'MO_From', 'MO_To', 'HA_Name', 'GR_CO_id'])
-
-    print(xmlToDf.to_string(index=False))
     return ["קפלן"]
 
 
@@ -127,7 +111,6 @@ def check_if_servers_record(requests_session, remote_records):
         if resp["Results"][0]["State"] != 2:
             print("REMOTE DOESNT RECORD")
         print("IS RECORDING")
-
 
 
 if __name__ == '__main__':
