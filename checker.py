@@ -126,6 +126,8 @@ def check_if_servers_record(requests_session, remote_records):
     for resp in resp_list:
         if resp["Results"][0]["State"] != 2:
             print("REMOTE DOESNT RECORD")
+        print("IS RECORDING")
+
 
 
 if __name__ == '__main__':
