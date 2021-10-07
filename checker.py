@@ -7,23 +7,14 @@ import requests
 import json
 from datetime import datetime, timedelta
 from urllib.parse import quote
-from dateutil import parser, rrule
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import schedule
 import config
 import socket
-import sessions
-from sessions import PanoptoSessions
-import argparse
-import win32com.client
 import pandas as pd
 import time
-import xml.etree.ElementTree as ET
-
-
-outlook = win32com.client.Dispatch("Outlook.Application")
 
 
 # python to EXE:
@@ -70,33 +61,51 @@ def update_client():
 
 def get_data():
     sheet = pd.read_excel(r"sample.xls")
-    data = sheet[["MO_From","MO_To", "HA_Name", "GR_CO_id"]]
-    data = data.sort_values(["MO_From","MO_To", "HA_Name", "GR_CO_id"], ascending=True)
+    data = sheet[["MO_From", "MO_To", "HA_Name", "GR_CO_id"]]
+    data = data.sort_values(["MO_From", "MO_To", "HA_Name", "GR_CO_id"], ascending=True)
     data.reset_index(drop=True, inplace=True)
     return data
 
-def maintain(requests_session,data):
-    for i in range(8,20):
-        current_data = data.loc[(data["MO_From"]<=i) & (data["MO_To"]>i)]
+
+def maintain(requests_session, data):
+    for i in range(8, 20):  # FROM 8:00 to 20:00
+        current_data = data.loc[(data["MO_From"] <= i) & (data["MO_To"] > i)]  # Select lectures that occurs now
         current_data.reset_index(drop=True, inplace=True)
-        while (True):
+        while True:
             current_time = datetime.now()
-            if i<current_time.hour:
+            if i < current_time.hour:  # adjusting to current hour
                 break
-            if (current_time.minute>45):
-                while (current_time.minute>45):
+            if current_time.minute > 45:
+                while current_time.minute > 45:  # adjusting to lecture time - between 0-45 min, then 15 break
                     time.sleep(60)
                     current_time = datetime.now()
                 break
-            parse_and_check(requests_session,current_data)
-            time.sleep(300)
+            parse_and_check(requests_session, current_data)
+            time.sleep(300)  # waiting between checks
     print("END OF SERVICE - have a nice day")
 
 
-def parse_and_check(requests_session,data):
+def parse_and_check(requests_session, data):
     result_df = data.drop_duplicates(subset=["HA_Name"], keep='first')
     result_df = result_df[result_df["HA_Name"].isin(config.SERVERS.keys())]
-    check_if_servers_record(requests_session,result_df["HA_Name"])
+    check_if_servers_record(requests_session, result_df["HA_Name"])
+
+
+def check_if_servers_record(requests_session, remote_records):
+    non_working_servers = []
+    for remote_recorder in remote_records:
+        recorder = config.SERVERS[remote_recorder]
+        url = config.BASE_URL + "remoteRecorders/search?searchQuery={0}".format(quote(recorder))
+        print('Calling GET {0}'.format(url))
+        resp = requests_session.get(url=url).json()
+        if resp["Results"][0]["State"] != 2:
+            print("REMOTE DOESNT RECORD: " + remote_recorder)
+            non_working_servers.append(remote_recorder)
+        else:
+            print("@@@@@@@@@@@@@@ IS RECORDING @@@@@@@@@@@@@@@")
+    if non_working_servers is not None:
+        # send_mail("Servers to check", "List of servers: " + str(non_working_servers))
+        pass
 
 
 def main():
@@ -112,29 +121,7 @@ def main():
     oauth2 = PanoptoOAuth2(config.PANOPTO_SERVER_NAME, config.PANOPTO_CLIEND_ID, config.PANOPTO_SECRET, False)
     authorization(requests_session, oauth2)
     data = get_data()
-    maintain(requests_session,data)
-    # check_if_servers_record(requests_session,recorders)
-
-    # schedule.every(1).hours.do(update_client)
-    # schedule.every(1).hours.do(authorization, requests_session, oauth2)
-    # schedule.every(5).seconds.do(while_waiting)
-    # while True:
-    #     schedule.run_pending()
-
-
-def check_if_servers_record(requests_session, remote_records):
-    non_working_servers = []
-    for remote_recorder in remote_records:
-        recorder = config.SERVERS[remote_recorder]
-        url = config.BASE_URL + "remoteRecorders/search?searchQuery={0}".format(quote(recorder))
-        print('Calling GET {0}'.format(url))
-        resp = requests_session.get(url=url).json()
-        if resp["Results"][0]["State"] != 2:
-            print("REMOTE DOESNT RECORD: "+remote_recorder)
-            non_working_servers.append(remote_recorder)
-        else:
-            print("@@@@@@@@@@@@@@ IS RECORDING @@@@@@@@@@@@@@@")
-
+    maintain(requests_session, data)
 
 
 if __name__ == '__main__':
