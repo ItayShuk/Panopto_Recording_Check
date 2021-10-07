@@ -19,7 +19,9 @@ from sessions import PanoptoSessions
 import argparse
 import win32com.client
 import pandas as pd
-import xml.etree.ElementTree as ETree
+import time
+import xml.etree.ElementTree as ET
+
 
 outlook = win32com.client.Dispatch("Outlook.Application")
 
@@ -66,15 +68,35 @@ def update_client():
     client = gspread.authorize(creds)
 
 
-def get_remote_recorders():
-    tree = ETree.parse(r"C:\Users\Itayshu\Desktop\Panopto_Recording_Check\sample.xml")
-    # get the root of the tree
-    root = tree.getroot()
+def get_data():
+    sheet = pd.read_excel(r"sample.xls")
+    data = sheet[["MO_From","MO_To", "HA_Name", "GR_CO_id"]]
+    data = data.sort_values(["MO_From","MO_To", "HA_Name", "GR_CO_id"], ascending=True)
+    data.reset_index(drop=True, inplace=True)
+    return data
 
-    # return the DataFrame
+def maintain(requests_session,data):
+    for i in range(8,20):
+        current_data = data.loc[(data["MO_From"]<=i) & (data["MO_To"]>i)]
+        current_data.reset_index(drop=True, inplace=True)
+        while (True):
+            current_time = datetime.now()
+            if i<current_time.hour:
+                break
+            if (current_time.minute>45):
+                while (current_time.minute>45):
+                    time.sleep(60)
+                    current_time = datetime.now()
+                break
+            parse_and_check(requests_session,current_data)
+            time.sleep(300)
+    print("END OF SERVICE - have a nice day")
 
 
-    return ["קפלן"]
+def parse_and_check(requests_session,data):
+    result_df = data.drop_duplicates(subset=["HA_Name"], keep='first')
+    result_df = result_df[result_df["HA_Name"].isin(config.SERVERS.keys())]
+    check_if_servers_record(requests_session,result_df["HA_Name"])
 
 
 def main():
@@ -85,12 +107,12 @@ def main():
     creds = ServiceAccountCredentials.from_json_keyfile_name(config.GOOGLE_JSON, scope)
     client = gspread.authorize(creds)
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
     requests_session = requests.Session()
     # Load OAuth2 logic
     oauth2 = PanoptoOAuth2(config.PANOPTO_SERVER_NAME, config.PANOPTO_CLIEND_ID, config.PANOPTO_SECRET, False)
     authorization(requests_session, oauth2)
-    recorders = get_remote_recorders()
+    data = get_data()
+    maintain(requests_session,data)
     # check_if_servers_record(requests_session,recorders)
 
     # schedule.every(1).hours.do(update_client)
@@ -101,16 +123,18 @@ def main():
 
 
 def check_if_servers_record(requests_session, remote_records):
-    resp_list = []
+    non_working_servers = []
     for remote_recorder in remote_records:
         recorder = config.SERVERS[remote_recorder]
         url = config.BASE_URL + "remoteRecorders/search?searchQuery={0}".format(quote(recorder))
         print('Calling GET {0}'.format(url))
-        resp_list.append(requests_session.get(url=url).json())
-    for resp in resp_list:
+        resp = requests_session.get(url=url).json()
         if resp["Results"][0]["State"] != 2:
-            print("REMOTE DOESNT RECORD")
-        print("IS RECORDING")
+            print("REMOTE DOESNT RECORD: "+remote_recorder)
+            non_working_servers.append(remote_recorder)
+        else:
+            print("@@@@@@@@@@@@@@ IS RECORDING @@@@@@@@@@@@@@@")
+
 
 
 if __name__ == '__main__':
