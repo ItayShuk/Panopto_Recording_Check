@@ -3,7 +3,7 @@
 This program running in background while checking servers which suppose to be on record state.
 The program extract the lectures data from sample.xlc, with that it checks which hall to be recorded at the moment,
 then check each server hall state.
-If any server state isn't recording while it should be, it notify in mail.
+If any isn't recording while it should be, it notify in mail.
 
 <!-- GETTING STARTED -->
 ## Getting Started
