@@ -1,16 +1,13 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from panopto_folders import PanoptoFolders
 from panopto_oauth2 import PanoptoOAuth2
 import urllib3
 import requests
-import json
 from datetime import datetime, timedelta
 from urllib.parse import quote
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import schedule
 import config
 import socket
 import pandas as pd
@@ -19,7 +16,7 @@ import time
 
 # python to EXE:
 # https://towardsdatascience.com/how-to-easily-convert-a-python-script-to-an-executable-file-exe-4966e253c7e9
-
+# auto-py-to-exe
 
 def send_mail(subject, body):
     """
@@ -73,15 +70,15 @@ def maintain(requests_session, data):
         current_data.reset_index(drop=True, inplace=True)
         while True:
             current_time = datetime.now()
+            print("Waiting for hour check " + str(current_time))
             if i < current_time.hour:  # adjusting to current hour
                 break
-            if current_time.minute > 45:
-                while current_time.minute > 45:  # adjusting to lecture time - between 0-45 min, then 15 break
-                    time.sleep(60)
-                    current_time = datetime.now()
+            if current_time.minute == 0:
+                time.sleep(15)
+                parse_and_check(requests_session, current_data)
+                time.sleep(60)
                 break
-            parse_and_check(requests_session, current_data)
-            time.sleep(300)  # waiting between checks
+            time.sleep(60 - current_time.second)  # waiting between checks
     print("END OF SERVICE - have a nice day")
 
 
@@ -98,14 +95,17 @@ def check_if_servers_record(requests_session, remote_records):
         url = config.BASE_URL + "remoteRecorders/search?searchQuery={0}".format(quote(recorder))
         print('Calling GET {0}'.format(url))
         resp = requests_session.get(url=url).json()
-        if resp["Results"][0]["State"] != 2:
+        if resp and resp["Results"] and resp["Results"][0] and resp["Results"][0]["State"] == 2:
+            print("@@@@@@@@@@@@@@ IS RECORDING @@@@@@@@@@@@@@@")
+        else:
             print("REMOTE DOESNT RECORD: " + remote_recorder)
             non_working_servers.append(remote_recorder)
-        else:
-            print("@@@@@@@@@@@@@@ IS RECORDING @@@@@@@@@@@@@@@")
-    if non_working_servers is not None:
-        # send_mail("Servers to check", "List of servers: " + str(non_working_servers))
-        pass
+    if len(non_working_servers) != 0:
+        send_mail("Servers to check" + str(datetime.now()),
+                  "Update on servers time: " + str(datetime.now()) + "\nList of servers to check: " + str(
+                      non_working_servers))
+    else:
+        send_mail("All servers record properly", "")
 
 
 def main():
