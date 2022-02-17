@@ -15,6 +15,7 @@ import config
 import socket
 import pandas as pd
 import time
+import schedule
 
 
 # python to EXE:
@@ -160,6 +161,8 @@ def main():
     # Load OAuth2 logic
     oauth2 = PanoptoOAuth2(config.PANOPTO_SERVER_NAME, config.PANOPTO_CLIEND_ID, config.PANOPTO_SECRET, False)
     authorization(requests_session, oauth2)
+    schedule.every(1).hours.do(update_client)
+    schedule.every(1).hours.do(authorization, requests_session, oauth2)
     data = get_data()
     maintain(requests_session, data)
 
