@@ -67,6 +67,8 @@ def get_data():
         input("Should we continue?\n")
         for filename in os.listdir():
             if filename.endswith(".xml"):
+                # Parsing the xml file, then casting it to pandas df
+
                 from lxml import etree
 
                 with (open(filename, 'r', encoding='utf-8')) as f:
@@ -112,9 +114,8 @@ def maintain(requests_session, data):
             if i < current_time.hour:  # adjusting to current hour
                 break
             if current_time.minute == 0:
-                time.sleep(15)
+                time.sleep(5)
                 parse_and_check(requests_session, current_data)
-                time.sleep(60)
                 break
             time.sleep(60 - current_time.second)  # waiting between checks
     print("END OF SERVICE - have a nice day")
@@ -138,6 +139,7 @@ def check_if_servers_record(requests_session, remote_records):
         else:
             print("REMOTE DOESNT RECORD: " + remote_recorder)
             non_working_servers.append(remote_recorder)
+        time.sleep(1)
     if len(non_working_servers) != 0:
         send_mail("Servers to check" + str(datetime.now()),
                   "Update on servers time: " + str(datetime.now()) + "\nList of servers to check: " + str(
