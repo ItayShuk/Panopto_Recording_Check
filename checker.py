@@ -98,6 +98,8 @@ def get_data():
         if sheet is None:
             print("No xml file found, please try again")
     data = sheet[["MO_From", "MO_To", "HA_Name", "GR_CO_id"]]
+    data = data.iloc[1:]
+    data[["MO_From","MO_To"]] = data[["MO_From","MO_To"]].astype(int)
     data = data.sort_values(["MO_From", "MO_To", "HA_Name", "GR_CO_id"], ascending=True)
     data.reset_index(drop=True, inplace=True)
     return data
