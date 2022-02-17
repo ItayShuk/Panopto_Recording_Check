@@ -1,3 +1,7 @@
+import glob
+import os
+import webbrowser
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from panopto_oauth2 import PanoptoOAuth2
@@ -12,6 +16,7 @@ import config
 import socket
 import pandas as pd
 import time
+import pandas_read_xml
 
 
 # python to EXE:
@@ -57,7 +62,41 @@ def update_client():
 
 
 def get_data():
-    sheet = pd.read_excel(r"sample.xls")
+    import xml.etree.ElementTree as ET
+
+    # webbrowser.open_new_tab(config.SHNATON)
+    sheet = None
+    while sheet is None:
+        input("Should we continue?\n")
+        for filename in os.listdir():
+            if filename.endswith(".xml"):
+                from lxml import etree
+
+                with (open(filename, 'r',encoding='utf-8')) as f:
+                    doc = etree.parse(f)
+
+                namespaces = {'o': 'urn:schemas-microsoft-com:office:office',
+                              'x': 'urn:schemas-microsoft-com:office:excel',
+                              'ss': 'urn:schemas-microsoft-com:office:spreadsheet'}
+
+                L = []
+                ws = doc.xpath('/ss:Workbook/ss:Worksheet', namespaces=namespaces)
+                if len(ws) > 0:
+                    tables = ws[0].xpath('./ss:Table', namespaces=namespaces)
+                    if len(tables) > 0:
+                        rows = tables[0].xpath('./ss:Row', namespaces=namespaces)
+                        for row in rows:
+                            tmp = []
+                            cells = row.xpath('./ss:Cell/ss:Data', namespaces=namespaces)
+                            for cell in cells:
+                                #                print(cell.text);
+                                tmp.append(cell.text)
+                            L.append(tmp)
+                sheet = pd.DataFrame(L)
+                sheet.columns = sheet.iloc[0]
+                print("Done")
+        if sheet is None:
+            print("No xml file found, please try again")
     data = sheet[["MO_From", "MO_To", "HA_Name", "GR_CO_id"]]
     data = data.sort_values(["MO_From", "MO_To", "HA_Name", "GR_CO_id"], ascending=True)
     data.reset_index(drop=True, inplace=True)
