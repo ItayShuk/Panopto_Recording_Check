@@ -1,9 +1,10 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-This program running in background while checking servers which suppose to be on record state.
-The program extract the lectures data from sample.xlc, with that it checks which hall to be recorded at the moment,
+This program running in background while checking that the Panopto servers status are recording.
+Doing so by extract the lectures data from .xml file in its directory,
+checking which hall to be recorded at the moment,
 then check each server hall state.
-If any isn't recording while it should be, it notify in mail.
+If any of the servers isn't recording, we will get notify in mail.
 
 <!-- GETTING STARTED -->
 ## Getting Started

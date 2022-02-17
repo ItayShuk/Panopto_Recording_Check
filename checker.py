@@ -1,7 +1,6 @@
 import glob
 import os
 import webbrowser
-
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from panopto_oauth2 import PanoptoOAuth2
@@ -16,7 +15,6 @@ import config
 import socket
 import pandas as pd
 import time
-import pandas_read_xml
 
 
 # python to EXE:
@@ -62,7 +60,7 @@ def update_client():
 
 
 def get_data():
-
+    # Hebrew UNI data base for recording lectures
     webbrowser.open_new_tab(config.SHNATON)
     sheet = None
     while sheet is None:
@@ -71,7 +69,7 @@ def get_data():
             if filename.endswith(".xml"):
                 from lxml import etree
 
-                with (open(filename, 'r',encoding='utf-8')) as f:
+                with (open(filename, 'r', encoding='utf-8')) as f:
                     doc = etree.parse(f)
 
                 namespaces = {'o': 'urn:schemas-microsoft-com:office:office',
@@ -98,7 +96,7 @@ def get_data():
             print("No xml file found, please try again")
     data = sheet[["MO_From", "MO_To", "HA_Name", "GR_CO_id"]]
     data = data.iloc[1:]
-    data[["MO_From","MO_To"]] = data[["MO_From","MO_To"]].astype(int)
+    data[["MO_From", "MO_To"]] = data[["MO_From", "MO_To"]].astype(int)
     data = data.sort_values(["MO_From", "MO_To", "HA_Name", "GR_CO_id"], ascending=True)
     data.reset_index(drop=True, inplace=True)
     return data
