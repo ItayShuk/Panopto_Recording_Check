@@ -62,9 +62,8 @@ def update_client():
 
 
 def get_data():
-    import xml.etree.ElementTree as ET
 
-    # webbrowser.open_new_tab(config.SHNATON)
+    webbrowser.open_new_tab(config.SHNATON)
     sheet = None
     while sheet is None:
         input("Should we continue?\n")
